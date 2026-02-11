@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="resources/icons/png/128x128.png" alt="Claude Code Context" width="120" />
+  <img src="resources/icons/png/512x512.png" alt="Claude Code Context" width="120" />
 </p>
 
 <h1 align="center">Claude Code Context</h1>

@@ -72,7 +72,9 @@ export const AdvancedSection = ({
         return (
           <>
             <Download className="size-3.5" />
-            {updateStatus === 'downloaded' ? 'Update ready' : `v${availableVersion} available`}
+            {updateStatus === 'downloaded'
+              ? 'Update ready'
+              : `v${availableVersion ?? 'unknown'} available`}
           </>
         );
       default:

@@ -17,18 +17,24 @@ export const UpdateDialog = (): React.JSX.Element | null => {
   if (!showUpdateDialog) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
-      onClick={dismissUpdateDialog}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <button
+        className="absolute inset-0 cursor-default"
+        style={{ backgroundColor: 'rgba(0, 0, 0, 0.6)' }}
+        onClick={dismissUpdateDialog}
+        aria-label="Close dialog"
+        tabIndex={-1}
+      />
       <div
         className="relative mx-4 w-full max-w-md rounded-lg border p-6 shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Update available"
         style={{
           backgroundColor: 'var(--color-surface-overlay)',
           borderColor: 'var(--color-border-emphasis)',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* Close button */}
         <button
