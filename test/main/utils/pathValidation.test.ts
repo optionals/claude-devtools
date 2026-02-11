@@ -16,7 +16,7 @@ import {
 describe('pathValidation', () => {
   const homeDir = os.homedir();
   const claudeDir = path.join(homeDir, '.claude');
-  const testProjectPath = '/home/user/my-project';
+  const testProjectPath = path.resolve('/home/user/my-project');
 
   describe('isPathWithinAllowedDirectories', () => {
     it('should allow paths within ~/.claude', () => {
@@ -150,7 +150,7 @@ describe('pathValidation', () => {
       it('should handle normalized paths with ..', () => {
         // This path resolves correctly but starts outside project
         const result = validateFilePath(
-          '/home/user/my-project/../other-project/file.ts',
+          path.join(testProjectPath, '..', 'other-project', 'file.ts'),
           testProjectPath
         );
         // Should be rejected because final path is outside project

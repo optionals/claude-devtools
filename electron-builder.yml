@@ -22,6 +22,8 @@ mac:
   hardenedRuntime: true
   gatekeeperAssess: false
   icon: resources/icons/mac/icon.icns
+  notarize:
+    teamId: ${env.APPLE_TEAM_ID}
 
 dmg:
   sign: false

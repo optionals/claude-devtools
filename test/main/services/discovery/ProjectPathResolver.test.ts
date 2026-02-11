@@ -20,7 +20,7 @@ describe('ProjectPathResolver', () => {
 
   afterEach(() => {
     for (const tempDir of tempDirs) {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
     }
     tempDirs.length = 0;
   });

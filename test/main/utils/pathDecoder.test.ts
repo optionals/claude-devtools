@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -173,13 +174,13 @@ describe('pathDecoder', () => {
   describe('buildSessionPath', () => {
     it('should construct correct session path', () => {
       expect(buildSessionPath('/base', 'project-id', 'session-123')).toBe(
-        '/base/project-id/session-123.jsonl'
+        path.join('/base', 'project-id', 'session-123.jsonl')
       );
     });
 
     it('should handle paths with special characters', () => {
       expect(buildSessionPath('/home/user/.claude/projects', '-Users-name', 'abc123')).toBe(
-        '/home/user/.claude/projects/-Users-name/abc123.jsonl'
+        path.join('/home/user/.claude/projects', '-Users-name', 'abc123.jsonl')
       );
     });
   });
@@ -187,7 +188,7 @@ describe('pathDecoder', () => {
   describe('buildSubagentsPath', () => {
     it('should construct correct subagents path', () => {
       expect(buildSubagentsPath('/base', 'project-id', 'session-123')).toBe(
-        '/base/project-id/session-123/subagents'
+        path.join('/base', 'project-id', 'session-123', 'subagents')
       );
     });
   });
@@ -195,20 +196,20 @@ describe('pathDecoder', () => {
   describe('buildTodoPath', () => {
     it('should construct correct todo path', () => {
       expect(buildTodoPath('/home/user/.claude', 'session-123')).toBe(
-        '/home/user/.claude/todos/session-123.json'
+        path.join('/home/user/.claude', 'todos', 'session-123.json')
       );
     });
   });
 
   describe('getProjectsBasePath', () => {
     it('should return projects base path', () => {
-      expect(getProjectsBasePath()).toBe('/home/testuser/.claude/projects');
+      expect(getProjectsBasePath()).toBe(path.join('/home/testuser', '.claude', 'projects'));
     });
   });
 
   describe('getTodosBasePath', () => {
     it('should return todos base path', () => {
-      expect(getTodosBasePath()).toBe('/home/testuser/.claude/todos');
+      expect(getTodosBasePath()).toBe(path.join('/home/testuser', '.claude', 'todos'));
     });
   });
 });
