@@ -13,6 +13,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { api } from '@renderer/api';
+import { confirm } from '@renderer/components/common/ConfirmDialog';
 import { useStore } from '@renderer/store';
 import { Edit2, Loader2, Plus, Save, Server, Trash2, X } from 'lucide-react';
 
@@ -143,7 +144,12 @@ export const WorkspaceSection = (): React.JSX.Element => {
     const profile = profiles.find((p) => p.id === id);
     if (!profile) return;
 
-    const confirmed = window.confirm(`Delete profile "${profile.name}"?`);
+    const confirmed = await confirm({
+      title: 'Delete Profile',
+      message: `Are you sure you want to delete "${profile.name}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
     if (!confirmed) return;
 
     const filtered = profiles.filter((p) => p.id !== id);

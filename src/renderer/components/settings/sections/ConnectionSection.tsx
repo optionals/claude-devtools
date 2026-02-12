@@ -61,6 +61,7 @@ export const ConnectionSection = (): React.JSX.Element => {
 
   // Saved profiles
   const [savedProfiles, setSavedProfiles] = useState<SshConnectionProfile[]>([]);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   const loadProfiles = useCallback(async () => {
     try {
@@ -123,6 +124,8 @@ export const ConnectionSection = (): React.JSX.Element => {
     );
   }, [host, sshConfigHosts]);
 
+  const clearProfileSelection = (): void => setSelectedProfileId(null);
+
   const handleSelectConfigHost = (entry: SshConfigHostEntry): void => {
     setHost(entry.alias);
     if (entry.port) setPort(String(entry.port));
@@ -130,6 +133,7 @@ export const ConnectionSection = (): React.JSX.Element => {
     setAuthMethod('auto');
     setShowDropdown(false);
     setTestResult(null);
+    clearProfileSelection();
   };
 
   const handleSelectProfile = (profile: SshConnectionProfile): void => {
@@ -140,6 +144,7 @@ export const ConnectionSection = (): React.JSX.Element => {
     if (profile.privateKeyPath) setPrivateKeyPath(profile.privateKeyPath);
     setPassword('');
     setTestResult(null);
+    setSelectedProfileId(profile.id);
   };
 
   const buildConfig = (): SshConnectionConfig => ({
@@ -241,24 +246,33 @@ export const ConnectionSection = (): React.JSX.Element => {
             Saved Profiles
           </h3>
           <div className="flex flex-wrap gap-2">
-            {savedProfiles.map((profile) => (
-              <button
-                key={profile.id}
-                type="button"
-                onClick={() => handleSelectProfile(profile)}
-                className="flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors hover:bg-surface-raised"
-                style={{
-                  borderColor: 'var(--color-border)',
-                  color: 'var(--color-text-secondary)',
-                }}
-              >
-                <Server className="size-3.5" style={{ color: 'var(--color-text-muted)' }} />
-                <span>{profile.name}</span>
-                <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
-                  {profile.username}@{profile.host}
-                </span>
-              </button>
-            ))}
+            {savedProfiles.map((profile) => {
+              const isSelected = selectedProfileId === profile.id;
+              return (
+                <button
+                  key={profile.id}
+                  type="button"
+                  onClick={() => handleSelectProfile(profile)}
+                  className={`flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm transition-colors ${isSelected ? '' : 'hover:bg-surface-raised'}`}
+                  style={{
+                    borderColor: isSelected ? 'rgba(99, 102, 241, 0.4)' : 'var(--color-border)',
+                    backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
+                    color: isSelected ? 'var(--color-text)' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  <Server
+                    className="size-3.5"
+                    style={{
+                      color: isSelected ? 'rgb(129, 140, 248)' : 'var(--color-text-muted)',
+                    }}
+                  />
+                  <span>{profile.name}</span>
+                  <span className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {profile.username}@{profile.host}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
@@ -284,6 +298,7 @@ export const ConnectionSection = (): React.JSX.Element => {
                   setHost(e.target.value);
                   setShowDropdown(true);
                   setTestResult(null);
+                  clearProfileSelection();
                 }}
                 onFocus={() => setShowDropdown(true)}
                 placeholder="hostname or ssh config alias"
@@ -348,7 +363,10 @@ export const ConnectionSection = (): React.JSX.Element => {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                clearProfileSelection();
+              }}
               placeholder="user"
               className={inputClass}
               style={inputStyle}

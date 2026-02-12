@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 
+import { ConfirmDialog } from './components/common/ConfirmDialog';
 import { ContextSwitchOverlay } from './components/common/ContextSwitchOverlay';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { TabbedLayout } from './components/layout/TabbedLayout';
@@ -44,6 +45,7 @@ export const App = (): React.JSX.Element => {
     <ErrorBoundary>
       <ContextSwitchOverlay />
       <TabbedLayout />
+      <ConfirmDialog />
     </ErrorBoundary>
   );
 };
