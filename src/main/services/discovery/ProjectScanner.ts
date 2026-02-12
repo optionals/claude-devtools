@@ -757,6 +757,13 @@ export class ProjectScanner {
   }
 
   /**
+   * Gets the FileSystemProvider instance used by this scanner.
+   */
+  getFileSystemProvider(): FileSystemProvider {
+    return this.fsProvider;
+  }
+
+  /**
    * Checks if the projects directory exists.
    */
   async projectsDirExists(): Promise<boolean> {

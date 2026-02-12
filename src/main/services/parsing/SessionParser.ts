@@ -74,7 +74,7 @@ export class SessionParser {
    * Parse a JSONL file at the given path.
    */
   async parseSessionFile(filePath: string): Promise<ParsedSession> {
-    const messages = await parseJsonlFile(filePath);
+    const messages = await parseJsonlFile(filePath, this.projectScanner.getFileSystemProvider());
     return this.processMessages(messages);
   }
 
@@ -339,7 +339,7 @@ export class SessionParser {
     messages: ParsedMessage[];
     metrics: SessionMetrics;
   }> {
-    const messages = await parseJsonlFile(filePath);
+    const messages = await parseJsonlFile(filePath, this.projectScanner.getFileSystemProvider());
     const metrics = calculateMetrics(messages);
 
     return { messages, metrics };

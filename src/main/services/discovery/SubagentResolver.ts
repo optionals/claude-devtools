@@ -85,7 +85,7 @@ export class SubagentResolver {
    */
   private async parseSubagentFile(filePath: string): Promise<Process | null> {
     try {
-      const messages = await parseJsonlFile(filePath);
+      const messages = await parseJsonlFile(filePath, this.projectScanner.getFileSystemProvider());
 
       if (messages.length === 0) {
         return null;

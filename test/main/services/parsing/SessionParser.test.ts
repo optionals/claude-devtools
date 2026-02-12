@@ -16,6 +16,7 @@ import {
   type ParsedSession,
 } from '../../../../src/main/services/parsing/SessionParser';
 import type { ParsedMessage } from '../../../../src/main/types';
+import { LocalFileSystemProvider } from '../../../../src/main/services/infrastructure/LocalFileSystemProvider';
 
 // =============================================================================
 // Mock ProjectScanner
@@ -30,6 +31,7 @@ const mockProjectScanner = {
   getSession: vi.fn(),
   listWorktreeSessions: vi.fn(),
   scanWithWorktreeGrouping: vi.fn(),
+  getFileSystemProvider: vi.fn().mockReturnValue(new LocalFileSystemProvider()),
 };
 
 // =============================================================================
