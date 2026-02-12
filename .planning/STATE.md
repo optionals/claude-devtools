@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2026-02-12)
 ## Current Position
 
 Phase: 2 of 4 (Service Infrastructure)
-Plan: 2 of 3
-Status: Plan 02-02 complete
-Last activity: 2026-02-12 - Completed 02-02 (Registry integration)
+Plan: 3 of 3
+Status: Phase 02 complete - ready for Phase 03
+Last activity: 2026-02-12 - Completed 02-03 (Context IPC and profile persistence)
 
 Progress: [████░░░░░░] 50.0% (2.0/4 phases)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 5 min
-- Total execution time: 0.23 hours
+- Total plans completed: 4
+- Average duration: 4 min
+- Total execution time: 0.27 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 Provider Plumbing | 1 | 4 min | 4 min |
-| 02 Service Infrastructure | 2 | 10 min | 5 min |
+| 02 Service Infrastructure | 3 | 12 min | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 4, 4, 6
-- Trend: Slight increase (registry integration more complex)
+- Last 5 plans: 4, 4, 6, 2
+- Trend: Decreasing (profile persistence was straightforward)
 
 *Updated after each plan completion*
 
@@ -57,6 +57,8 @@ Recent decisions affecting current work:
 - SSH handler dynamically imports onContextSwitched to avoid circular dependencies (02-02)
 - Context ID for SSH uses simple format: ssh-{host} (02-02)
 - Destroy existing SSH context on reconnection to same host (02-02)
+- [Phase 02-03]: SSH profiles stored in ConfigManager config.ssh.profiles for persistence
+- [Phase 02-03]: lastActiveContextId persisted in config for app restart restoration
 
 ### Pending Todos
 
@@ -82,9 +84,9 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-12
-Stopped at: Completed 02-02 (Registry integration) — ready for 02-03
+Stopped at: Completed 02-03 (Context IPC and profile persistence) — Phase 02 complete
 Resume file: None
 
 ---
 *Created: 2026-02-12*
-*Last updated: 2026-02-12 after completing 02-02-PLAN.md*
+*Last updated: 2026-02-12 after completing 02-03-PLAN.md*
