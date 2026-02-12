@@ -39,6 +39,7 @@ const logger = createLogger('IPC:ssh');
 
 let connectionManager: SshConnectionManager;
 let registry: ServiceContextRegistry;
+let onContextRewire: (context: ServiceContext) => void;
 
 // =============================================================================
 // Initialization
@@ -48,13 +49,16 @@ let registry: ServiceContextRegistry;
  * Initialize SSH handlers with required services.
  * @param manager - The SSH connection manager instance
  * @param contextRegistry - The service context registry
+ * @param onRewire - Rewire-only callback (no renderer notification) for renderer-initiated switches
  */
 export function initializeSshHandlers(
   manager: SshConnectionManager,
-  contextRegistry: ServiceContextRegistry
+  contextRegistry: ServiceContextRegistry,
+  onRewire: (context: ServiceContext) => void
 ): void {
   connectionManager = manager;
   registry = contextRegistry;
+  onContextRewire = onRewire;
 }
 
 // =============================================================================
@@ -95,9 +99,8 @@ export function registerSshHandlers(ipcMain: IpcMain): void {
       // Switch to SSH context
       registry.switch(contextId);
 
-      // Import and call context switch callback from index.ts
-      const { onContextSwitched } = await import('../index');
-      onContextSwitched(sshContext);
+      // Re-wire file watcher events only (renderer's connectSsh() handles state)
+      onContextRewire(sshContext);
 
       return { success: true, data: connectionManager.getStatus() };
     } catch (err) {
@@ -124,10 +127,9 @@ export function registerSshHandlers(ipcMain: IpcMain): void {
         // Destroy the SSH context
         registry.destroy(currentContextId);
 
-        // Call context switch callback to rewire events
+        // Re-wire file watcher events only (renderer's disconnectSsh() handles state)
         const localContext = registry.getActive();
-        const { onContextSwitched } = await import('../index');
-        onContextSwitched(localContext);
+        onContextRewire(localContext);
       }
 
       return { success: true, data: connectionManager.getStatus() };

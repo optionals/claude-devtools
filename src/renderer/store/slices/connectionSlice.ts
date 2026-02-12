@@ -76,8 +76,30 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
         connectionState: status.state,
         connectedHost: status.host,
         connectionError: status.error,
-        // Clear stale local selections so dashboard shows fresh remote data
-        ...(status.state === 'connected' ? getFullResetState() : {}),
+        // On connect: sync context ID + clear all stale local data including tabs
+        ...(status.state === 'connected'
+          ? {
+              activeContextId: `ssh-${config.host}`,
+              projects: [],
+              repositoryGroups: [],
+              openTabs: [],
+              activeTabId: null,
+              selectedTabIds: [],
+              paneLayout: {
+                panes: [
+                  {
+                    id: 'pane-default',
+                    tabs: [],
+                    activeTabId: null,
+                    selectedTabIds: [],
+                    widthFraction: 1,
+                  },
+                ],
+                focusedPaneId: 'pane-default',
+              },
+              ...getFullResetState(),
+            }
+          : {}),
       });
 
       // Re-fetch all data and persist config when connected
@@ -114,7 +136,25 @@ export const createConnectionSlice: StateCreator<AppState, [], [], ConnectionSli
         connectionState: status.state,
         connectedHost: null,
         connectionError: null,
-        // Clear stale remote selections so dashboard shows fresh local data
+        activeContextId: 'local',
+        // Clear all stale SSH data including tabs so dashboard shows fresh local data
+        projects: [],
+        repositoryGroups: [],
+        openTabs: [],
+        activeTabId: null,
+        selectedTabIds: [],
+        paneLayout: {
+          panes: [
+            {
+              id: 'pane-default',
+              tabs: [],
+              activeTabId: null,
+              selectedTabIds: [],
+              widthFraction: 1,
+            },
+          ],
+          focusedPaneId: 'pane-default',
+        },
         ...getFullResetState(),
       });
 

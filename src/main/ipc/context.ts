@@ -7,12 +7,7 @@
  * - context:switch - Switch to a different context
  */
 
-import {
-  CONTEXT_CHANGED,
-  CONTEXT_GET_ACTIVE,
-  CONTEXT_LIST,
-  CONTEXT_SWITCH,
-} from '@preload/constants/ipcChannels';
+import { CONTEXT_GET_ACTIVE, CONTEXT_LIST, CONTEXT_SWITCH } from '@preload/constants/ipcChannels';
 import { createLogger } from '@shared/utils/logger';
 
 import type { ServiceContext, ServiceContextRegistry } from '../services';
@@ -25,7 +20,7 @@ const logger = createLogger('IPC:context');
 // =============================================================================
 
 let registry: ServiceContextRegistry;
-let onContextSwitched: (context: ServiceContext) => void;
+let onContextRewire: (context: ServiceContext) => void;
 
 // =============================================================================
 // Initialization
@@ -34,14 +29,14 @@ let onContextSwitched: (context: ServiceContext) => void;
 /**
  * Initialize context handlers with required services.
  * @param contextRegistry - The service context registry
- * @param onSwitched - Callback to invoke after successful context switch
+ * @param onRewire - Rewire-only callback (no renderer notification) for renderer-initiated switches
  */
 export function initializeContextHandlers(
   contextRegistry: ServiceContextRegistry,
-  onSwitched: (context: ServiceContext) => void
+  onRewire: (context: ServiceContext) => void
 ): void {
   registry = contextRegistry;
-  onContextSwitched = onSwitched;
+  onContextRewire = onRewire;
 }
 
 // =============================================================================
@@ -76,8 +71,8 @@ export function registerContextHandlers(ipcMain: IpcMain): void {
       // Switch to the new context
       const { current } = registry.switch(contextId);
 
-      // Invoke the context switched callback (re-wires file watcher events)
-      onContextSwitched(current);
+      // Re-wire file watcher events only (no renderer notification — renderer initiated this switch)
+      onContextRewire(current);
 
       return { success: true, data: { contextId } };
     } catch (err) {

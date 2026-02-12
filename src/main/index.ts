@@ -34,6 +34,7 @@ const getIconPath = (): string => {
 const logger = createLogger('App');
 // IPC channel constants (duplicated from @preload to avoid boundary violation)
 const SSH_STATUS = 'ssh:status';
+const CONTEXT_CHANGED = 'context:changed';
 const HTTP_SERVER_START = 'httpServer:start';
 const HTTP_SERVER_STOP = 'httpServer:stop';
 const HTTP_SERVER_GET_STATUS = 'httpServer:getStatus';
@@ -118,18 +119,25 @@ async function handleModeSwitch(mode: 'local' | 'ssh'): Promise<void> {
 }
 
 /**
- * Callback invoked when context switches (called by SSH IPC handler).
- * Re-wires file watcher events and notifies renderer.
+ * Re-wires file watcher events only. No renderer notification.
+ * Used for renderer-initiated switches where the renderer already handles state.
  */
-export function onContextSwitched(context: ServiceContext): void {
-  // Re-wire file watcher events to new context
+export function rewireContextEvents(context: ServiceContext): void {
   wireFileWatcherEvents(context);
+}
+
+/**
+ * Full callback: re-wire + notify renderer.
+ * Used for external/unexpected switches (e.g., HTTP server mode switch).
+ */
+function onContextSwitched(context: ServiceContext): void {
+  rewireContextEvents(context);
 
   // Notify renderer of context change
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send(SSH_STATUS, sshConnectionManager.getStatus());
-    mainWindow.webContents.send('context-changed', {
-      contextId: context.id,
+    mainWindow.webContents.send(CONTEXT_CHANGED, {
+      id: context.id,
       type: context.type,
     });
   }
@@ -174,7 +182,10 @@ function initializeServices(): void {
   httpServer = new HttpServer();
 
   // Initialize IPC handlers with registry
-  initializeIpcHandlers(contextRegistry, updaterService, sshConnectionManager, onContextSwitched);
+  initializeIpcHandlers(contextRegistry, updaterService, sshConnectionManager, {
+    rewire: rewireContextEvents,
+    full: onContextSwitched,
+  });
 
   // HTTP Server control IPC handlers
   ipcMain.handle(HTTP_SERVER_START, async () => {

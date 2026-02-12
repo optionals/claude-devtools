@@ -12,9 +12,8 @@ import { getFullResetState } from '../utils/stateResetHelpers';
 
 import type { AppState } from '../types';
 import type { ContextSnapshot } from '@renderer/services/contextStorage';
-import type { DetectedError, Project, RepositoryGroup } from '@renderer/types/data';
+import type { Project, RepositoryGroup } from '@renderer/types/data';
 import type { Pane } from '@renderer/types/panes';
-import type { Tab } from '@renderer/types/tabs';
 import type { ContextInfo } from '@shared/types/api';
 import type { StateCreator } from 'zustand';
 
@@ -280,51 +279,106 @@ export const createContextSlice: StateCreator<AppState, [], [], ContextSlice> = 
       return;
     }
 
+    // Re-entrancy guard: prevent concurrent switch races from overlapping events
+    if (state.isContextSwitching) {
+      return;
+    }
+
     set({
       isContextSwitching: true,
       targetContextId,
     });
 
     try {
-      // Step 1: Capture current context's snapshot
+      // Step 1: Save current snapshot + load target snapshot + switch main process
+      // These are independent — run in parallel for speed
       const currentSnapshot = captureSnapshot(state, state.activeContextId);
-      await contextStorage.saveSnapshot(state.activeContextId, currentSnapshot);
-
-      // Step 2: Switch main process context
-      await api.context.switch(targetContextId);
-
-      // Step 3: Fetch fresh data from target context
-      const [freshProjects, freshRepoGroups] = await Promise.all([
-        api.getProjects(),
-        api.getRepositoryGroups(),
+      const [, targetSnapshot] = await Promise.all([
+        contextStorage.saveSnapshot(state.activeContextId, currentSnapshot),
+        contextStorage.loadSnapshot(targetContextId),
+        api.context.switch(targetContextId),
       ]);
 
-      // Step 4: Attempt to restore snapshot for target context
-      const targetSnapshot = await contextStorage.loadSnapshot(targetContextId);
-
+      // Step 2: Apply cached snapshot immediately for instant visual feedback
       if (targetSnapshot) {
-        // Validate and restore snapshot
-        const validatedState = validateSnapshot(targetSnapshot, freshProjects, freshRepoGroups);
-        set(validatedState);
-      } else {
-        // No snapshot (new context or expired) - apply empty state
-        const emptyState = getEmptyContextState();
         set({
-          ...emptyState,
-          projects: freshProjects,
-          repositoryGroups: freshRepoGroups,
+          projects: targetSnapshot.projects,
+          repositoryGroups: targetSnapshot.repositoryGroups,
+          selectedProjectId: targetSnapshot.selectedProjectId,
+          selectedRepositoryId: targetSnapshot.selectedRepositoryId,
+          selectedWorktreeId: targetSnapshot.selectedWorktreeId,
+          viewMode: targetSnapshot.viewMode,
+          sessions: targetSnapshot.sessions,
+          selectedSessionId: targetSnapshot.selectedSessionId,
+          sessionsCursor: targetSnapshot.sessionsCursor,
+          sessionsHasMore: targetSnapshot.sessionsHasMore,
+          sessionsTotalCount: targetSnapshot.sessionsTotalCount,
+          pinnedSessionIds: targetSnapshot.pinnedSessionIds,
+          notifications: targetSnapshot.notifications,
+          unreadCount: targetSnapshot.unreadCount,
+          openTabs: targetSnapshot.openTabs,
+          activeTabId: targetSnapshot.activeTabId,
+          selectedTabIds: targetSnapshot.selectedTabIds,
+          activeProjectId: targetSnapshot.activeProjectId,
+          paneLayout: targetSnapshot.paneLayout,
+          sidebarCollapsed: targetSnapshot.sidebarCollapsed,
+          // Finalize switch — overlay disappears, user sees cached data instantly
+          activeContextId: targetContextId,
+          isContextSwitching: false,
+          targetContextId: null,
         });
       }
 
-      // Step 5: Fetch notifications in background
-      void get().fetchNotifications();
+      // Step 3: Fetch fresh data in background (slow over SSH)
+      // Wrapped in try/catch so fetch failures don't wipe valid snapshot data.
+      // IPC handlers return [] on SSH scan failure — we must guard against that.
+      try {
+        const [freshProjects, freshRepoGroups] = await Promise.all([
+          api.getProjects(),
+          api.getRepositoryGroups(),
+        ]);
 
-      // Step 6: Finalize switch
-      set({
-        isContextSwitching: false,
-        targetContextId: null,
-        activeContextId: targetContextId,
-      });
+        if (targetSnapshot) {
+          // Guard: don't overwrite snapshot data if fetch returned empty
+          // (likely transient SSH scan failure, not genuinely empty workspace)
+          const snapshotHadData =
+            targetSnapshot.projects.length > 0 || targetSnapshot.repositoryGroups.length > 0;
+          const freshIsEmpty = freshProjects.length === 0 && freshRepoGroups.length === 0;
+
+          if (snapshotHadData && freshIsEmpty) {
+            console.warn(
+              '[contextSlice] Background fetch returned empty but snapshot had data — keeping snapshot'
+            );
+          } else {
+            set(validateSnapshot(targetSnapshot, freshProjects, freshRepoGroups));
+          }
+        } else {
+          // No cache (first visit) — apply empty state with fresh data
+          set({
+            ...getEmptyContextState(),
+            projects: freshProjects,
+            repositoryGroups: freshRepoGroups,
+            activeContextId: targetContextId,
+            isContextSwitching: false,
+            targetContextId: null,
+          });
+        }
+      } catch (fetchError) {
+        console.error('[contextSlice] Background data refresh failed:', fetchError);
+        // Keep snapshot data as fallback — don't wipe user's view
+        if (!targetSnapshot) {
+          // No snapshot and fetch failed — finalize switch with empty state
+          set({
+            ...getEmptyContextState(),
+            activeContextId: targetContextId,
+            isContextSwitching: false,
+            targetContextId: null,
+          });
+        }
+      }
+
+      // Step 4: Fetch notifications in background
+      void get().fetchNotifications();
     } catch (error) {
       console.error('[contextSlice] Failed to switch context:', error);
       // Do NOT leave in broken state

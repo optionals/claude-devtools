@@ -64,7 +64,10 @@ export function initializeIpcHandlers(
   registry: ServiceContextRegistry,
   updater: UpdaterService,
   sshManager: SshConnectionManager,
-  onContextSwitched: (context: ServiceContext) => void
+  contextCallbacks: {
+    rewire: (context: ServiceContext) => void;
+    full: (context: ServiceContext) => void;
+  }
 ): void {
   // Initialize domain handlers with registry
   initializeProjectHandlers(registry);
@@ -72,8 +75,8 @@ export function initializeIpcHandlers(
   initializeSearchHandlers(registry);
   initializeSubagentHandlers(registry);
   initializeUpdaterHandlers(updater);
-  initializeSshHandlers(sshManager, registry);
-  initializeContextHandlers(registry, onContextSwitched);
+  initializeSshHandlers(sshManager, registry, contextCallbacks.rewire);
+  initializeContextHandlers(registry, contextCallbacks.rewire);
 
   // Register all handlers
   registerProjectHandlers(ipcMain);

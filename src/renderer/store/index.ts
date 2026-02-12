@@ -280,6 +280,8 @@ export function initializeNotificationListeners(): () => void {
   }
 
   // Listen for SSH connection status changes from main process
+  // NOTE: Only syncs connection status here. Data fetching is handled by
+  // connectionSlice.connectSsh/disconnectSsh and contextSlice.switchContext.
   if (api.ssh?.onStatus) {
     const cleanup = api.ssh.onStatus((_event: unknown, status: unknown) => {
       const s = status as { state: string; host: string | null; error: string | null };
@@ -290,13 +292,6 @@ export function initializeNotificationListeners(): () => void {
           s.host,
           s.error
         );
-
-      // Re-fetch all data when connection state changes to connected or disconnected
-      if (s.state === 'connected' || s.state === 'disconnected') {
-        const store = useStore.getState();
-        void store.fetchProjects();
-        void store.fetchRepositoryGroups();
-      }
     });
     if (typeof cleanup === 'function') {
       cleanupFns.push(cleanup);
@@ -306,7 +301,7 @@ export function initializeNotificationListeners(): () => void {
   // Listen for context changes from main process (e.g., SSH disconnect)
   if (api.context?.onChanged) {
     const cleanup = api.context.onChanged((_event: unknown, data: unknown) => {
-      const { id } = data as { id: string };
+      const { id } = data as { id: string; type: string };
       const currentContextId = useStore.getState().activeContextId;
       if (id !== currentContextId) {
         // Main process switched context externally (e.g., SSH disconnect)
