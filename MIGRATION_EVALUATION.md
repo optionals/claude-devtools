@@ -39,7 +39,25 @@
 - **UI 开发**：使用 `ratatui`。虽然性能极佳，但布局和交互逻辑比 React 更繁琐。
 - **维护成本**：如果保留 Web 界面（用于 VS Code 插件等），则需要维护 TS 和 Rust 两套解析逻辑，或通过 WASM 复用 Rust 逻辑（增加了架构复杂度）。
 
-## 5. 原型实现 (Proof of Concept)
+## 5. 方案对比：TUI 模式 vs 原生 Server 模式 (Standalone)
+
+代码库中已包含 `Standalone Server` (基于 Fastify)，用于 Docker 部署。本节对比 **Server 模式** 与 **TUI 模式** 的差异，以回应“为了 TUI 而 TUI，引入新依赖”的质疑。
+
+| 特性 | TUI 模式 (Terminal UI) | Server 模式 (Standalone) |
+| :--- | :--- | :--- |
+| **交互界面** | 纯终端字符界面 (ink) | 完整 Web UI (React/Browser) |
+| **依赖变更** | 移除 Electron / Fastify<br>新增 `ink` (~180KB) | 移除 Electron<br>保留 `fastify`, `react-dom` |
+| **运行时环境** | 仅需 Terminal | Terminal (后端) + Browser (前端) |
+| **使用场景** | SSH 远程操作、纯键盘党、低资源环境 | 本地开发、需要富文本/图表展示 |
+| **体积 (Bun打包后)** | ~90MB (包含 UI 渲染逻辑) | ~95MB (包含静态资源) |
+| **体验差异** | **无上下文切换**，沉浸式操作 | 需切换到浏览器窗口 |
+
+**分析结论**：
+- 如果目标仅仅是“移除 Electron”，**Server 模式** 是现成的且成本最低（零新代码，零新依赖）。
+- **TUI 模式** 的核心价值在于 **Usage Context**（使用场景）：它解决了在远程服务器（SSH）上查看日志时，无需配置端口转发、无需打开浏览器的痛点。
+- 关于依赖：TUI 引入的 `ink` 及其依赖（`yoga-layout` 等）相比 Electron 的体积是微不足道的。若使用 Server 模式，虽然不引入 `ink`，但运行时仍需携带完整的前端构建产物（HTML/CSS/JS）。
+
+## 6. 原型实现 (Proof of Concept)
 
 已在代码库中实现 TUI 原型，位于 `src/tui` 目录。
 
@@ -63,7 +81,7 @@ npx tsx src/tui/index.tsx
 - 新增开发依赖：`ink` (v4.4.1), `ink-select-input`, `ink-text-input`。
 - 移除运行时依赖（针对 TUI 构建）：`electron`, `electron-updater`, `fastify` (若不需要本地服务器)。
 
-## 6. 结论与建议
+## 7. 结论与建议
 
 建议采用 **方案 1 (Node.js/Bun + TUI)**。
 
