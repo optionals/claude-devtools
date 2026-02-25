@@ -80,7 +80,28 @@
 ### 6.3 结论
 从安全角度看，**TUI 模式是最安全的架构**。它移除了浏览器引擎（XSS 攻击面）、Electron 构建链（供应链漏洞）和 HTTP 服务端口（网络攻击面），仅保留最核心的本地文件读取逻辑。
 
-## 7. 原型实现 (Proof of Concept)
+## 7. 构建系统与 Electron 依赖 (Build System)
+
+### 7.1 为什么需要 `electron-vite`？
+当前项目使用 `electron-vite` 是因为它是为 Electron 应用设计的。它通过多入口配置同时构建：
+- **Main Process** (`dist-electron/main`)：Node.js 环境。
+- **Preload Scripts** (`dist-electron/preload`)：桥接环境。
+- **Renderer Process** (`out/renderer`)：React 前端资源。
+
+### 7.2 Server 模式需要 Electron 吗？
+**不需要**。目前的 Server 模式 (`src/main/standalone.ts`) 是一个纯 Node.js 服务。
+但 `package.json` 中的 `standalone:build` 脚本调用了 `electron-vite build`，这仅仅是为了利用现有的配置来构建 React 前端资源 (`out/renderer`)。
+
+### 7.3 优化方案
+我们已验证（见 `vite.renderer.config.ts`），可以使用纯 `vite` 构建前端资源，从而彻底移除对 `electron` 和 `electron-vite` 的依赖。
+
+**剥离步骤**：
+1.  **Server 模式**：使用 `vite build -c vite.renderer.config.ts` 构建前端，使用 `tsc` 或 `esbuild` 构建后端 (`src/main/standalone.ts`)。
+2.  **TUI 模式**：使用 `tsc` 或 `esbuild` 直接构建 `src/tui/index.tsx`，无需构建任何 Web 前端资源。
+
+**结论**：`electron-vite` 仅是当前构建流的一部分遗留，并非 Server/TUI 模式的技术硬性依赖。迁移后可以完全移除。
+
+## 8. 原型实现 (Proof of Concept)
 
 已在代码库中实现 TUI 原型，位于 `src/tui` 目录。
 
@@ -103,18 +124,3 @@ npx tsx src/tui/index.tsx
 ### 依赖变更
 - 新增开发依赖：`ink` (v4.4.1), `ink-select-input`, `ink-text-input`。
 - 移除运行时依赖（针对 TUI 构建）：`electron`, `electron-updater`, `fastify` (若不需要本地服务器)。
-
-## 8. 结论与建议
-
-建议采用 **方案 1 (Node.js/Bun + TUI)**。
-
-**理由**：
-1.  **即刻可用**：核心逻辑无需修改即可运行。
-2.  **轻量化显著**：彻底摆脱 Electron，满足“减少依赖”和“体积小”的核心诉求。
-3.  **安全性最佳**：消除 XSS、RCE（浏览器层）及构建链漏洞。
-4.  **扩展性**：基于 React 的 TUI 易于维护，且未来若需集成到 VS Code (作为 Webview 或 纯命令工具)，逻辑层是通用的。
-
-**下一步行动**：
-1.  完善 TUI 功能（添加搜索、Diff 视图、配置管理）。
-2.  配置打包脚本（如使用 `pkg` 或迁移至 `bun` 进行单文件打包）。
-3.  逐步移除 `package.json` 中 TUI 不需要的大型依赖。
