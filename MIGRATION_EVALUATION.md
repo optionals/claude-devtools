@@ -57,7 +57,30 @@
 - **TUI 模式** 的核心价值在于 **Usage Context**（使用场景）：它解决了在远程服务器（SSH）上查看日志时，无需配置端口转发、无需打开浏览器的痛点。
 - 关于依赖：TUI 引入的 `ink` 及其依赖（`yoga-layout` 等）相比 Electron 的体积是微不足道的。若使用 Server 模式，虽然不引入 `ink`，但运行时仍需携带完整的前端构建产物（HTML/CSS/JS）。
 
-## 6. 原型实现 (Proof of Concept)
+## 6. 安全评估 (Security Assessment)
+
+针对当前代码库及迁移方案的安全审计结果：
+
+### 6.1 依赖风险
+- **Electron 生态**：当前 `electron-builder` 依赖的 `tar` 包存在多个高危漏洞（路径遍历、符号链接攻击）。**迁移到 TUI/Server 模式将直接消除此风险**，因为不再需要打包 Electron 应用。
+- **Markdown 渲染**：Web/Electron 端使用 `react-markdown`。虽然库本身默认防御 XSS，但若配置不当（如启用 `rehype-raw` 或 `dangerouslySetInnerHTML`）可能存在风险。
+    - **TUI 优势**：TUI 模式不使用 HTML 渲染引擎，天然免疫 XSS 攻击。Markdown 仅作为纯文本或格式化文本展示。
+
+### 6.2 代码风险
+- **文件系统访问**：`LocalFileSystemProvider` 直接使用 `fs.promises`。虽然目前主要用于读取 `~/.claude`，但缺乏严格的沙箱机制（如 chroot）。
+    - **建议**：在 `LocalFileSystemProvider` 中增加路径校验，确保只能访问 `~/.claude` 或显式授权的项目目录，防止路径遍历（`../`）。
+- **远程命令执行 (RCE)**：
+    - `SshConnectionManager` 包含 `execRemoteCommand` 功能，这是设计所需（用于获取远程项目路径）。
+    - **风险**：如果恶意构造的 `host` 配置被注入，可能导致连接到恶意服务器。
+    - **缓解**：仅信任 `~/.ssh/config` 中的配置和用户输入的连接信息。
+- **网络暴露**：
+    - **Server 模式**：默认监听 `0.0.0.0`（在 Docker 中）。若在宿主机直接运行，建议绑定到 `127.0.0.1` 以防止局域网访问。
+    - **TUI 模式**：无网络监听端口，攻击面最小。
+
+### 6.3 结论
+从安全角度看，**TUI 模式是最安全的架构**。它移除了浏览器引擎（XSS 攻击面）、Electron 构建链（供应链漏洞）和 HTTP 服务端口（网络攻击面），仅保留最核心的本地文件读取逻辑。
+
+## 7. 原型实现 (Proof of Concept)
 
 已在代码库中实现 TUI 原型，位于 `src/tui` 目录。
 
@@ -81,16 +104,17 @@ npx tsx src/tui/index.tsx
 - 新增开发依赖：`ink` (v4.4.1), `ink-select-input`, `ink-text-input`。
 - 移除运行时依赖（针对 TUI 构建）：`electron`, `electron-updater`, `fastify` (若不需要本地服务器)。
 
-## 7. 结论与建议
+## 8. 结论与建议
 
 建议采用 **方案 1 (Node.js/Bun + TUI)**。
 
 **理由**：
 1.  **即刻可用**：核心逻辑无需修改即可运行。
 2.  **轻量化显著**：彻底摆脱 Electron，满足“减少依赖”和“体积小”的核心诉求。
-3.  **扩展性**：基于 React 的 TUI 易于维护，且未来若需集成到 VS Code (作为 Webview 或 纯命令工具)，逻辑层是通用的。
+3.  **安全性最佳**：消除 XSS、RCE（浏览器层）及构建链漏洞。
+4.  **扩展性**：基于 React 的 TUI 易于维护，且未来若需集成到 VS Code (作为 Webview 或 纯命令工具)，逻辑层是通用的。
 
 **下一步行动**：
 1.  完善 TUI 功能（添加搜索、Diff 视图、配置管理）。
 2.  配置打包脚本（如使用 `pkg` 或迁移至 `bun` 进行单文件打包）。
-3.  逐步移除 `package.json` 中 TUI 不需要的大型依赖（如 `unified` 生态若在 TUI 中不渲染 Markdown 可移除，或仅保留必要部分）。
+3.  逐步移除 `package.json` 中 TUI 不需要的大型依赖。
