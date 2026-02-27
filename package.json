@@ -45,7 +45,8 @@
     "test:coverage:critical": "vitest run --coverage --config vitest.critical.config.ts",
     "standalone": "tsx src/main/standalone.ts",
     "standalone:build": "electron-vite build && vite build --config vite.standalone.config.ts",
-    "standalone:start": "node dist-standalone/index.cjs"
+    "standalone:start": "node dist-standalone/index.cjs",
+    "tui": "tsx src/tui/index.tsx"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -101,6 +102,9 @@
     "eslint-plugin-tailwindcss": "^3.18.2",
     "globals": "^17.2.0",
     "happy-dom": "^20.0.2",
+    "ink": "^4.4.1",
+    "ink-select-input": "^5.0.0",
+    "ink-text-input": "^5.0.1",
     "knip": "^5.82.1",
     "postcss": "^8.4.35",
     "prettier": "^3.8.1",
